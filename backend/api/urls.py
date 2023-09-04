@@ -1,0 +1,37 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    path('users/', views.UserListView.as_view(), name='user-list'),
+    path('users/inactive/', views.InactiveUserListView.as_view(), name='inactive-user-list'),
+    path('user/<int:pk>/', views.UserDetailView.as_view(), name='user-detail'),
+    path('fandom/create/', views.FandomCreateView.as_view(), name='fandom-create'),
+    path('fandoms/', views.FandomListView.as_view(), name='fandom-list'),
+    path('fandom/<int:pk>/', views.FandomDetailView.as_view(), name='fandom-detail'),
+    path('fandom/<int:pk>/characters/', views.FandomCharacterListView.as_view(), name='fandom-detail'),
+    path('fandom/<int:pk>/products/', views.FandomProductListView.as_view(), name='fandom-detail'),
+    path('character/create/', views.CharacterCreateView.as_view(), name='character-create'),
+    path('characters/', views.CharacterListView.as_view(), name='character-list'),
+    path('character/<int:pk>/', views.CharacterDetailView.as_view(), name='character-detail'),
+    path('character/<int:pk>/products/', views.CharacterProductListView.as_view(), name='character-detail'),
+    path('product/create/', views.ProductCreateView.as_view(), name='product-create'),
+    path('products/', views.ProductListView.as_view(), name='product-list'),
+    path('product/<int:pk>/', views.ProductDetailView.as_view(), name='product-detail'),
+    path('order/create/', views.OrderCreateView.as_view(), name='order-create'),
+    path('user/<int:pk>/orders/', views.OrderListView.as_view(), name='order-list'),
+    path('order/<int:pk>/', views.OrderDetailView.as_view(), name='order-detail'),
+    path('review/create/', views.ReviewCreateView.as_view(), name='review-create'),
+    path('product/<int:product_id>/reviews/', views.ReviewListView.as_view(), name='review-list'),
+    path('review/<int:pk>/', views.ReviewDetailView.as_view(), name='review-detail'),
+    path('credit-card/create/', views.CreditCardCreateView.as_view(), name='credit-card-create'),
+    path('user/<int:user_id>/credit-cards/', views.CreditCardListView.as_view(), name='credit-card-list'),
+    path('credit-card/<int:pk>/', views.CreditCardDetailView.as_view(), name='credit-card-detail'),
+    path('user/<int:pk>/favorites/', views.FavoriteListView.as_view(), name='favorite-list'),
+    path('add-to-cart/<int:product_id>/', views.add_product_to_cart, name='add-to-cart'),
+    path('reduce-product-quantity-in-cart/<int:product_id>/',
+         views.ReduceProductQuantityInCartView.as_view(),
+         name='reduce-product-quantity-in-cart'),
+    path('delete-from-cart/<int:product_id>/', views.DeleteFromCartView.as_view(), name='add-to-cart'),
+    path('cart/', views.CartListView.as_view(), name='cart'),
+    path('order-item/<int:pk>/', views.OrderItemView.as_view(), name='order-item')
+] 

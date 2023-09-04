@@ -1,0 +1,16 @@
+*.pyc
+__pycache__/
+node_modules/
+package-lock.json
+yarn-error.log
+venv/
+.venv/
+.vscode/
+.env
+.env.local
+logs/
+*.log
+*.bak
+*.swp
+.idea/
+.editorconfig
