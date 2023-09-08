@@ -11,6 +11,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
+from django.core.mail import send_mail
+from twilio.rest import Client
+from django.conf import settings
+
 User = get_user_model()
 
     
@@ -34,41 +38,77 @@ class ReviewCreateView(generics.CreateAPIView):
 class OrderCreateView(APIView):
     authentication_classes = [JWTAuthentication]
 
-    def get_cart_items(self, request):
-        cart = Cart(request)
-        return cart.get_cart_items()
-
     def get(self, request):
-        cart_items = self.get_cart_items(request)
-        serializer = CartItemSerializer(cart_items, many=True)
-        return Response({'cart_items': serializer.data})
+        cart = Cart(request)
+        cart_length = cart.__len__()
+        cart_items = cart.get_cart_items()
+        total_cart_price = cart.get_total_cart_price()
+        data = {
+            'cart_length': cart_length,
+            'cart_items': CartItemSerializer(cart_items, many=True).data,
+            'total_cart_price': total_cart_price
+            }
+        serializer = CartSerializer(data)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        if request.user.is_authenticated:
+        cart = Cart(request)
+        cart_items = cart.get_cart_items()
+        user = request.user
+
+        if user.is_authenticated:
             serializer = CreateOrderAuthenticatedSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
         else:
             serializer = CreateOrderSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            name = serializer.validated_data.get('name')
+            email = serializer.validated_data.get('email')
+            phone_number = serializer.validated_data.get('phone_number')
+            if not (name and email and phone_number):
+                return Response({'error': 'Fields "address", "name", "email" and "phone_number" are required.'}, status=status.HTTP_400_BAD_REQUEST)
+            
+        if cart_items:
+            order = serializer.save(customer=user if user.is_authenticated else None, status="Created")
 
-        serializer.is_valid(raise_exception=True)
+            for item in cart_items:
+                product_id = item['product'].id
+                product = Product.objects.prefetch_related('seller', 'reviews').annotate(
+                        reviews_count=Count('reviews'),
+                        average_score=Avg('reviews__score')
+                    ).get(id=product_id)
+                quantity = item['quantity']
+                OrderItem.objects.create(order=order, product=product, quantity=quantity)
 
-        cart_items = self.get_cart_items(request)
-        user = request.user
-        order = serializer.save(customer=user if user.is_authenticated else None, status="Created")
+            # Очистка корзины
+            cart = Cart(request)
+            cart.clear()
 
-        for item in cart_items:
-            product_id = item['product'].id
-            product = Product.objects.prefetch_related('seller', 'reviews').annotate(
-                    reviews_count=Count('reviews'),
-                    average_score=Avg('reviews__score')
-                ).get(id=product_id)
-            quantity = item['quantity']
-            OrderItem.objects.create(order=order, product=product, quantity=quantity)
+            client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+            client.messages.create(
+                body=f'{order.name}, Ваш заказ успешно оформлен. Подробную информацию ' \
+                      'о заказе можете узнать по ссылке: ' \
+                      'http://localhost:8000/api/order/{order.id}/',
+                from_=settings.TWILIO_PHONE_NUMBER,
+                to=order.phone_number
+            )
 
-        cart = Cart(request)
-        cart.clear()
+            # Отправка email
+            subject = 'Новый заказ'
+            email_body = f'{order.name}, Ваш заказ №{order.id} успешно оформлен. ' \
+                         f'Подробную информацию о заказе можете узнать по ссылке: ' \
+                         f'http://localhost:8000/api/order/{order.id}/'
+            
+            send_mail(subject, 
+                      email_body,
+                      settings.EMAIL_HOST_USER,
+                      [order.email],
+                      fail_silently=False,
+                     )
 
-        return Response({'message': 'Заказ успешно оформлен'}, status=status.HTTP_201_CREATED)
-
+            return Response({'message': 'Your order has been successfully completed.'}, status=status.HTTP_201_CREATED)
+        else:
+            return Response({'error': 'Your cart is empty.'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CreditCardCreateView(generics.CreateAPIView):
@@ -270,6 +310,13 @@ class DeleteFromCartView(APIView):
 class CartListView(APIView):
     def get(self, request):
         cart = Cart(request)
+        cart_length = cart.__len__()
         cart_items = cart.get_cart_items()
-        serializer = CartItemSerializer(cart_items, many=True)
+        total_cart_price = cart.get_total_cart_price()
+        data = {
+            'cart_length': cart_length,
+            'cart_items': CartItemSerializer(cart_items, many=True).data,
+            'total_cart_price': total_cart_price
+            }
+        serializer = CartSerializer(data)
         return Response(serializer.data, status=status.HTTP_200_OK)

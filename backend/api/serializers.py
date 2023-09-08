@@ -118,6 +118,12 @@ class CartItemSerializer(serializers.Serializer):
 	total_price = serializers.IntegerField()
 
 
+class CartSerializer(serializers.Serializer):
+	cart_length = serializers.IntegerField()
+	cart_items = serializers.ListField()
+	total_cart_price = serializers.IntegerField()
+
+
 class OrderItemSerializer(serializers.ModelSerializer):
 	product = SimpleProductSerializer(read_only=True)
 	price = serializers.SerializerMethodField()
@@ -136,12 +142,13 @@ class OrderSerializer(serializers.ModelSerializer):
 	customer = SimpleUserSerializer(read_only=True)
 	total_price = serializers.SerializerMethodField()
 
+
 	def get_total_price(self, order):
 		return order.get_order_price()
 
 	class Meta:
 		model = Order
-		fields = ('id', 'customer', 'name', 'phone_number', 'order_items', 'address', 'status', 'timestamp', 'total_price')
+		fields = ('id', 'customer', 'name', 'email', 'phone_number', 'order_items', 'address', 'status', 'timestamp', 'total_price')
 
 	
 class FavoriteSerializer(serializers.ModelSerializer):
@@ -171,6 +178,7 @@ class CreateProductSerializer(serializers.ModelSerializer):
 
 class CreateOrderAuthenticatedSerializer(serializers.ModelSerializer):
 	order_items = OrderItemSerializer(many=True, read_only=True)
+	customer = SimpleUserSerializer(read_only=True)
 
 	class Meta:
 		model = Order
@@ -182,7 +190,7 @@ class CreateOrderSerializer(serializers.ModelSerializer):
 
 	class Meta:
 		model = Order
-		fields = ('id', 'name', 'phone_number', 'order_items', 'address', 'timestamp')
+		fields = ('id', 'name', 'email', 'phone_number', 'order_items', 'address', 'timestamp')
 
 
 class CreateReviewSerializer(serializers.ModelSerializer):

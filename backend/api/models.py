@@ -77,7 +77,7 @@ class User(AbstractUser):
 		upload_to="profile_pictures/",
 		default="profile_pictures/no-photo-available-icon-20.jpg"
 	)
-	email = models.CharField(max_length=255, unique=True)
+	email = models.EmailField(unique=True)
 	USERNAME_FIELD = 'email'
 	REQUIRED_FIELDS = ['username',]
 
@@ -193,13 +193,14 @@ class Order(models.Model):
 	customer = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
 	name = models.CharField(max_length=100, null=True, blank=True)
 	phone_number = models.CharField(max_length=12, blank=True, null=True)
+	email = models.EmailField(blank=True, null=True)
 	address = models.CharField(max_length=255, blank=False, null=False)
 	timestamp = models.DateTimeField(auto_now_add=True)
 	status = models.CharField(max_length=20, choices=ORDER_STATUS_CHOICES, blank=False, null=False)
 
 	def clean(self):
 		if not self.customer and not (self.name and self.phone_number):
-			raise ValidationError('Either provide the field "customer" or fields "name" and "phone_number".')
+			raise ValidationError('Either provide the field "customer" or fields "name", "phone_number" and "email".')
 
 	def __str__(self):
 		return self.customer.username

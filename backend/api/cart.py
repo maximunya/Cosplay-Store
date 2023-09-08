@@ -47,8 +47,13 @@ class Cart(object):
             item['price'] = int(item['price'])
             item['total_price'] = item['price'] * item['quantity']
             cart_items.append(item)
-
         return cart_items
+    
+    def get_total_cart_price(self):
+        total_cart_price = 0
+        for item in self.get_cart_items():
+            total_cart_price += int(item['total_price'])
+        return total_cart_price
     
     def __iter__(self):
         product_ids = self.cart.keys()
@@ -72,5 +77,5 @@ class Cart(object):
     
     def clear(self):
         # Очистка корзины
-        del self.cart
+        del self.session['cart']
         self.session.modified = True
