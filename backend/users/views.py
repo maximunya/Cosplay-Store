@@ -4,7 +4,7 @@ from rest_framework import generics
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 
 from stores.models import Employee
-from common_serializers import UserSimpleSerializer
+from common.serializers import UserSimpleSerializer
 
 from . import serializers
 from .permissions import IsOwnerOrAdminOrReadOnly, IsOwner

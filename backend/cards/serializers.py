@@ -1,7 +1,8 @@
 from rest_framework import serializers
-from .models import Card, Transaction
 
-from common_serializers import UserSimpleSerializer, StoreSimpleSerializer
+from common.serializers import UserSimpleSerializer, StoreSimpleSerializer
+
+from .models import Card, Transaction
 
 
 class CardCreateSerializer(serializers.ModelSerializer):

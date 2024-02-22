@@ -3,9 +3,8 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 
 from rest_framework import generics
-from rest_framework.permissions import IsAuthenticated
 
-from common_serializers import (
+from common.serializers import (
     ProductSerializer,
     ProductDetailSerializer,
     ReviewSerializer,

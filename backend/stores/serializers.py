@@ -3,7 +3,8 @@ from django.contrib.auth import get_user_model
 
 from rest_framework import serializers
 
-from common_serializers import (
+from orders.serializers import OrderSimpleSerializer
+from common.serializers import (
     ProductSerializer,
     ProductSimpleSerializer,
     OrderItemSimpleSerializer, 
@@ -14,7 +15,6 @@ from common_serializers import (
 )
 
 from .models import Store, Employee
-from orders.serializers import OrderSimpleSerializer
 
 
 Transaction = apps.get_model('cards', 'Transaction')

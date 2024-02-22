@@ -1,9 +1,8 @@
 from rest_framework import serializers
+
+from common.serializers import ProductSerializer, FandomSerializer
+
 from .models import Fandom, Character
-
-from common_serializers import ProductSerializer, FandomSerializer
-
-
 
 
 class FandomCreateSerializer(serializers.ModelSerializer):

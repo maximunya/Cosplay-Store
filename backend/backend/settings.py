@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'djoser',
     'debug_toolbar',
 
+    'common',
     'users',
     'stores',
     'cards',

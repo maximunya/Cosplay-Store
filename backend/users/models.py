@@ -6,8 +6,6 @@ from django.core.exceptions import ValidationError
 from django.contrib.auth.models import AbstractUser
 
 
-
-
 class User(AbstractUser):
 	"""Custom User model"""
 	def get_upload_to(instance, filename):

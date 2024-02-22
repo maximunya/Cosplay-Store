@@ -1,17 +1,17 @@
 from rest_framework import serializers
-from .models import Order, OrderItem
 
 from users.models import Address
 from users.serializers import AddressSerializer
 from cards.models import Card
 from cards.serializers import CardSimpleSerializer
-	
-from common_serializers import (
+from common.serializers import (
 	UserSimpleSerializer,
 	AddressSimpleSerializer,
 	CardListSerializer,
 	ProductSerializer,
 )
+
+from .models import Order, OrderItem
 
 
 class OrderItemSerializer(serializers.ModelSerializer):

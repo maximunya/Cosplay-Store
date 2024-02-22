@@ -13,7 +13,7 @@ from products.models import Product, Review, ProductImage
 from orders.models import OrderItem, ORDER_ITEM_STATUS_CHOICES
 from cards.models import Transaction
 from products.serializers import ProductCreateSerializer, AnswerCreateSerializer
-from common_serializers import StoreListSerializer
+from common.serializers import StoreListSerializer
 
 from .models import Store, Employee
 from . import serializers

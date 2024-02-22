@@ -1,4 +1,3 @@
-from django.conf import settings
 from .models import Product
 from django.db.models import Count, Avg, Sum
 

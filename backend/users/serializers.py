@@ -7,11 +7,9 @@ from djoser.serializers import (
 )
 
 from stores.models import Employee
-from common_serializers import StoreSimpleSerializer
+from common.serializers import StoreSimpleSerializer
 
 from .models import User, Address
-
-
 
 
 class CustomUserCreateSerializer(UserCreateSerializer):
