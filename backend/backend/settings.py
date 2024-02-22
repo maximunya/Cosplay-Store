@@ -1,6 +1,7 @@
+import os
+
 from pathlib import Path
 from datetime import timedelta
-import os
 from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -23,17 +24,26 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
-    'rest_framework',
-    'corsheaders',
-    'djoser',
-    'debug_toolbar',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'api',
+
+    'rest_framework',
+    'corsheaders',
+    'djoser',
+    'debug_toolbar',
+
+    'users',
+    'stores',
+    'cards',
+    'fandoms',
+    'products',
+    'orders',
+    'cart',
+    'favorites',
 ]
 
 MIDDLEWARE = [
@@ -53,33 +63,42 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.AllowAny'
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
 }
 
 SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('JWT',),
-    'ACCESS_TOKEN_LIFETIME': timedelta(seconds=5),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': False,
 }
 
 DJOSER = {
+    'USER_ID_FIELD': 'username',
     'USER_CREATE_PASSWORD_RETYPE': True,
     'PASSWORD_CHANGED_EMAIL_CONFIRMATION': True,
+    'USERNAME_CHANGED_EMAIL_CONFIRMATION': True,
     'SEND_CONFIRMATION_EMAIL': True,
     'SET_PASSWORD_RETYPE': True,
     'PASSWORD_RESET_CONFIRM_RETYPE': True,
+    'USERNAME_RESET_CONFIRM_RETYPE': True,
     'PASSWORD_RESET_CONFIRM_URL': 'password/reset/confirm/{uid}/{token}',
-    'USERNAME_RESET_CONFIRM_URL': 'username/reset/confirm/{uid}/{token}',
+    'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': True,
+    'USERNAME_RESET_CONFIRM_URL': 'email/reset/confirm/{uid}/{token}',
+    'USERNAME_RESET_SHOW_EMAIL_NOT_FOUND': True,
     'ACTIVATION_URL': 'activate/{uid}/{token}',
     'SEND_ACTIVATION_EMAIL': True,
+    'LOGOUT_ON_PASSWORD_CHANGE': True,
     'SERIALIZERS': {
-        'user_create': 'api.serializers.UserCreateSerializer',
-        'user': 'api.serializers.CustomUserSerializer',
-        'current_user': 'api.serializers.CustomUserSerializer',
+        'user_create': 'users.serializers.UserCustomCreateSerializer',
+        'user': 'users.serializers.UserDetailPublicSerializer',
+        'current_user': 'users.serializers.UserDetailPrivateSerializer',
         'user_delete': 'djoser.serializers.UserDeleteSerializer',
+        'user_create_password_retype': 'users.serializers.CustomUserCreatePasswordRetypeSerializer',
+        'username_reset_confirm': 'djoser.serializers.UsernameResetConfirmSerializer',
     },
 }
 
@@ -133,7 +152,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-AUTH_USER_MODEL = "api.User"
+AUTH_USER_MODEL = "users.User"
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.2/topics/i18n/
@@ -153,6 +172,12 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATICFILES_DIRS = []
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+
+# Media fiels
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
