@@ -19,3 +19,6 @@ class CartItem(models.Model):
 			return super(CartItem, self).save(*args, **kwargs)
 		else:
 			raise ValidationError('The cart limit is 100 products only.')
+		
+	class Meta:
+		ordering = ['-id']

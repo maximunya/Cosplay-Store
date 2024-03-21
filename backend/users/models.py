@@ -22,6 +22,9 @@ class User(AbstractUser):
 	USERNAME_FIELD = 'email'
 	REQUIRED_FIELDS = ['username']
 
+	def __str__(self):
+		return self.username
+
 	def get_age(self):
 		if self.birth_date:
 			today = datetime.today()
@@ -29,9 +32,9 @@ class User(AbstractUser):
 			return age
 		else:
 			return None
-
-	def __str__(self):
-		return self.username
+		
+	class Meta:
+		ordering = ['username']
 	
 
 class Address(models.Model):
@@ -53,4 +56,5 @@ class Address(models.Model):
 				raise ValidationError('The limit is 5 addresses only.')
 		return super(Address, self).save(*args, **kwargs)
 	
-
+	class Meta:
+		ordering = ['created_at']

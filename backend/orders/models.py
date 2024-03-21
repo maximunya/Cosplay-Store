@@ -40,6 +40,12 @@ class Order(models.Model):
 	total_order_price = models.PositiveIntegerField()
 	status = models.CharField(max_length=20, choices=ORDER_STATUS_CHOICES, blank=False, null=False)
 
+	def __str__(self):
+		return self.slug
+	
+	def get_order_price(self):
+		return sum(order_item.get_total_price() for order_item in self.order_items.all())
+
 	def save(self, *args, **kwargs):
 		if not self.slug:
 			while True:
@@ -53,11 +59,8 @@ class Order(models.Model):
 		else:
 			super(Order, self).save(*args, **kwargs)
 
-	def get_order_price(self):
-		return sum(order_item.get_total_price() for order_item in self.order_items.all())
-	
-	def __str__(self):
-		return self.slug
+	class Meta:
+		ordering = ['-created_at']
 	
 
 class OrderItem(models.Model):
@@ -74,9 +77,6 @@ class OrderItem(models.Model):
 	price = models.PositiveIntegerField()
 	created_at = models.DateTimeField(auto_now_add=True)
 	updated_at = models.DateTimeField(auto_now=True)
-
-	class Meta:
-		ordering = ['status', '-created_at']
 
 	def __str__(self):
 		return f'{self.product.title}: {self.quantity}'
@@ -95,6 +95,9 @@ class OrderItem(models.Model):
 				break
 		else:
 			super(OrderItem, self).save(*args, **kwargs)
+
+	class Meta:
+		ordering = ['-created_at']
 
 		
 

@@ -4,6 +4,7 @@ from pathlib import Path
 from datetime import timedelta
 from decouple import config
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -32,6 +33,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'rest_framework',
+    'django_filters',
+    'crispy_forms',
+    'crispy_bootstrap4',
+    'django_elasticsearch_dsl',
     'corsheaders',
     'djoser',
     'debug_toolbar',
@@ -67,6 +72,19 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.SessionAuthentication',
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': (
+        'django_filters.rest_framework.DjangoFilterBackend',
+    ),
+}
+
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
+
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': 'http://localhost:9200',
+    },
 }
 
 SIMPLE_JWT = {

@@ -18,7 +18,7 @@ class Store(models.Model):
 		store_id = instance.id
 		return f"store_logos/store_{store_id}/{filename}"
 
-	slug = models.SlugField(unique=True, max_length=255)
+	slug = models.SlugField(unique=True, max_length=255, blank=True)
 	owner = models.OneToOneField(User, on_delete=models.CASCADE, related_name='store')
 	organization_type = models.CharField(max_length=50, choices=ORGANIZATION_TYPE_CHOICES)
 	organization_name = models.CharField(max_length=255)
@@ -54,8 +54,9 @@ class Employee(models.Model):
 	is_admin = models.BooleanField(default=False)
 	hired_at = models.DateTimeField(auto_now_add=True)
 
-	class Meta:
-		unique_together = ('user', 'store')
-
 	def __str__(self):
 		return f'{self.store.name} - {self.user.username}'
+	
+	class Meta:
+		unique_together = ('user', 'store')
+		ordering = ['-is_owner', '-is_admin', 'hired_at']

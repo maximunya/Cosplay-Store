@@ -17,7 +17,7 @@ class Fandom(models.Model):
 	def get_upload_to(instance, filename):
 		return f"fandom_images/{instance.slug}/{filename}"
 
-	slug = models.SlugField(unique=True, max_length=255)
+	slug = models.SlugField(unique=True, max_length=255, blank=True)
 	name = models.CharField(max_length=255, unique=True)
 	fandom_type = models.CharField(max_length=10, choices=FANDOM_TYPE_CHOICES)
 	image = models.ImageField(
@@ -33,13 +33,16 @@ class Fandom(models.Model):
 			self.slug = slugify(self.name, allow_unicode=True)
 		return super().save(*args, **kwargs)
 	
+	class Meta:
+		ordering = ['name']
+	
 
 class Character(models.Model):
 	"""Character model"""
 	def get_upload_to(instance, filename):
 		return f"character_images/{instance.fandom.slug}/{instance.slug}/{filename}"
 	
-	slug = models.SlugField(unique=True, max_length=255)
+	slug = models.SlugField(unique=True, max_length=255, blank=True)
 	name = models.CharField(max_length=255, unique=True)
 	fandom = models.ForeignKey(Fandom, on_delete=models.CASCADE, related_name='characters')
 	image = models.ImageField(
@@ -54,5 +57,8 @@ class Character(models.Model):
 		if not self.slug:
 			self.slug = slugify(self.name, allow_unicode=True)
 		return super().save(*args, **kwargs)
+	
+	class Meta:
+		ordering = ['name']
 
 

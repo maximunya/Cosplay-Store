@@ -55,7 +55,7 @@ SCORE_CHOICES = (
 
 class Product(models.Model):
 	"""Product model"""
-	slug = models.SlugField(unique=True, allow_unicode=True, max_length=255, editable=False)
+	slug = models.SlugField(unique=True, allow_unicode=True, max_length=255, editable=False, blank=True)
 	seller = models.ForeignKey(Store, on_delete=models.CASCADE, related_name='store_products')
 	title = models.CharField(max_length=255)
 	description = models.TextField(max_length=1000)
@@ -117,6 +117,9 @@ class ProductImage(models.Model):
 			return super().save(*args, **kwargs)
 		else:
 			raise ValidationError('The limit is 10 images only.')
+		
+	class Meta:
+		ordering = ['id']
 
 
 class Review(models.Model):
@@ -131,6 +134,9 @@ class Review(models.Model):
 	def __str__(self):
 		return f'{self.customer} - {self.score}* - {self.text}'
 	
+	class Meta:
+		ordering = ['-timestamp']
+	
 
 class Answer(models.Model):
 	'''Answer model'''
@@ -142,4 +148,7 @@ class Answer(models.Model):
 
 	def __str__(self):
 		return f'{self.seller} - {self.text}'
+	
+	class Meta:
+		ordering = ['timestamp']
 

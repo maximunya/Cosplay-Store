@@ -2,7 +2,6 @@ import uuid
 
 from django.db import models
 from django.core.exceptions import ValidationError
-from django.utils import timezone as tz
 
 from users.models import User
 from orders.models import OrderItem, Order
@@ -18,9 +17,6 @@ class Card(models.Model):
 	balance = models.PositiveIntegerField(default=0)
 	created_at = models.DateTimeField(blank=True, auto_now_add=True)
 
-	class Meta:
-		unique_together = ('user', 'card_number')
-
 	def __str__(self):
 		return f'{self.card_number}'
 
@@ -31,6 +27,10 @@ class Card(models.Model):
 			else:
 				raise ValidationError('The limit is 5 credit cards only.')
 		return super(Card, self).save(*args, **kwargs)
+	
+	class Meta:
+		unique_together = ('user', 'card_number')
+		ordering = ['created_at']
 		
 
 class Transaction(models.Model):
@@ -55,3 +55,5 @@ class Transaction(models.Model):
 	def __str__(self):
 		return f'{self.transaction_type} - {self.amount}'
 
+	class Meta:
+		ordering = ['-timestamp']

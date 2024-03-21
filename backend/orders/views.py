@@ -5,11 +5,12 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 
-from rest_framework import generics, status
+from rest_framework import generics, status, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view
+from django_filters.rest_framework import DjangoFilterBackend
 
 from cart.cart import Cart
 from cart.models import CartItem
@@ -24,7 +25,10 @@ from stores.models import Store
 from . import serializers
 from .models import Product, Order, OrderItem
 from .permissions import IsCustomerOrAdminUser, IsCustomerOrSellerOrAdminUser
-from .services import send_order_success_notifications
+from .services import (
+    send_order_created_notifications, 
+    send_order_paid_notifications
+)
 
 
 User = get_user_model()
@@ -38,7 +42,7 @@ class OrderCreateView(APIView):
         if user.is_authenticated:
             cart_items = CartItem.objects.prefetch_related(
                 Prefetch('product', queryset=Product.objects.annotate(
-                reviews_count=Count('reviews'),
+                reviews_count=Count('reviews', distinct=True),
                 average_score=Avg('reviews__score'),
                 total_ordered_quantity=Sum('ordered_products__quantity')
             ).prefetch_related('reviews', 'product_images'
@@ -179,7 +183,7 @@ class OrderCreateView(APIView):
                     product_id = item['product'].id
                     product = get_object_or_404(
                         Product.objects.annotate(
-                            reviews_count=Count('reviews'),
+                            reviews_count=Count('reviews', distinct=True),
                             average_score=Avg('reviews__score'),
                             total_ordered_quantity=Sum('ordered_products__quantity')
                         ).prefetch_related('reviews', 'product_images'
@@ -197,7 +201,7 @@ class OrderCreateView(APIView):
                 cart.clear()
 
             # Отправка SMS и Email об успешном оформлении заказа через Celery
-            send_order_success_notifications(user, order)
+            send_order_created_notifications(user, order)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response({'message': 'Your order has been successfully created.'}, status=status.HTTP_201_CREATED)
@@ -206,12 +210,16 @@ class OrderCreateView(APIView):
 class OrderListView(generics.ListAPIView):
     serializer_class = serializers.OrderListSerializer
     permission_classes = (IsAuthenticated,)
-    
+    filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
+    filterset_fields = {'created_at': ['year'], 'status': ['exact']}
+    ordering = ['-created_at']
+    ordering_fields = ['total_order_price', 'created_at', 'updated_at', 'status']
+
     def get_queryset(self):
         user = self.request.user
         return Order.objects.prefetch_related(
             Prefetch('order_items__product', queryset=Product.objects.annotate(
-                reviews_count=Count('reviews'),
+                reviews_count=Count('reviews', distinct=True),
                 average_score=Avg('reviews__score'),
                 total_ordered_quantity=Sum('ordered_products__quantity')
                 ).prefetch_related('reviews', 'product_images'
@@ -224,7 +232,7 @@ class OrderDetailView(generics.RetrieveAPIView):
     permission_classes = (IsCustomerOrAdminUser,)
     queryset = Order.objects.prefetch_related(
         Prefetch('order_items__product', queryset=Product.objects.annotate(
-            reviews_count=Count('reviews'),
+            reviews_count=Count('reviews', distinct=True),
             average_score=Avg('reviews__score'),
             total_ordered_quantity=Sum('ordered_products__quantity')
             ).prefetch_related('reviews', 'product_images'
@@ -242,7 +250,7 @@ class OrderItemView(generics.RetrieveAPIView):
                                                 'order__address',
                                                 'order__card'
         ).prefetch_related(Prefetch('product', queryset=Product.objects.annotate(
-            reviews_count=Count('reviews'),
+            reviews_count=Count('reviews', distinct=True),
             average_score=Avg('reviews__score'),
             total_ordered_quantity=Sum('ordered_products__quantity')
             ).prefetch_related('reviews', 'product_images',
@@ -320,6 +328,8 @@ def create_order_payment(request, order_id):
 
         order.status = 2
         order.save()
+
+        send_order_paid_notifications(user, order)
     else:
         return Response({'error': 'You cannot pay for this order.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
     

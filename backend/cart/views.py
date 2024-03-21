@@ -86,7 +86,7 @@ def cart_list(request):
     if user.is_authenticated:
         cart_items = CartItem.objects.prefetch_related(
             Prefetch('product', queryset=Product.objects.annotate(
-                reviews_count=Count('reviews'),
+                reviews_count=Count('reviews', distinct=True),
                 average_score=Avg('reviews__score'),
                 total_ordered_quantity=Sum('ordered_products__quantity')
             ).prefetch_related('reviews', 'product_images'

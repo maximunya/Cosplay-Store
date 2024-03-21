@@ -52,7 +52,7 @@ class Cart(object):
         # Получить список словарей каждого товара из корзины пользоветаля
         product_ids = self.cart.keys()
         products = Product.objects.annotate(
-                reviews_count=Count('reviews'),
+                reviews_count=Count('reviews', distinct=True),
                 average_score=Avg('reviews__score'),
                 total_ordered_quantity=Sum('ordered_products__quantity')
             ).prefetch_related('reviews', 'product_images'
@@ -75,7 +75,7 @@ class Cart(object):
     def __iter__(self):
         product_ids = self.cart.keys()
         products = Product.objects.annotate(
-                reviews_count=Count('reviews'),
+                reviews_count=Count('reviews', distinct=True),
                 average_score=Avg('reviews__score'),
                 total_ordered_quantity=Sum('ordered_products__quantity')
             ).prefetch_related('reviews', 'product_images'
