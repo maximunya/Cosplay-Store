@@ -4,7 +4,9 @@ node_modules/
 package-lock.json
 yarn-error.log
 venv/
+env/
 .venv/
+.env/
 .vscode/
 .env
 .env.local
