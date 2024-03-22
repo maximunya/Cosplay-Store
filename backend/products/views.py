@@ -34,8 +34,8 @@ class ProductListView(generics.ListAPIView):
         'cosplay_character__name__exact', 'cosplay_character__fandom__name__exact',
         'cosplay_character__fandom__fandom_type', 'product_type__exact', 'size__exact',
         'shoes_size__exact', 'seller__name__exact', 'seller__organization_name__exact',
-        'seller__is_admin_store', 'seller__is_verified', 'total_ordered_quantity__gte', 
-        'total_ordered_quantity__lte'
+        'seller__is_admin_store', 'seller__is_verified',
+        'total_ordered_quantity__gte', 'total_ordered_quantity__lte'
     ]
     search_fields = [
         'title', 'description', 'size', 'shoes_size',
