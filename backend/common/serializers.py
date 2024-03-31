@@ -99,7 +99,7 @@ class ProductSerializer(serializers.ModelSerializer):
 				  'cosplay_character', 'seller', 'is_active',
 	              'price', 'real_price', 'discount', 'in_stock',
 				  'product_type', 'timestamp', 'total_ordered_quantity',
-				  'reviews_count', 'average_score')
+				  'size', 'shoes_size', 'reviews_count', 'average_score')
 
 	def get_real_price(self, product):
 		return product.get_real_price()

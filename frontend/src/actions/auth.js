@@ -30,7 +30,7 @@ export const checkAuthenticated = () => async dispatch => {
         
         try {
             console.log('Отправляю запрос на проверку имеющегося access токена')
-            const res = await axios.post(`http://localhost:8000/auth/jwt/verify/`, body, config)
+            const res = await axios.post(`http://localhost:8000/api/auth/jwt/verify/`, body, config)
         
             if (res.data.code !== 'token_not_valid') {
                 console.log('access токен валидный, юзер аутентифицирован')
@@ -70,7 +70,7 @@ export const refreshTokens = () => async dispatch => {
         try {
             console.log('Отправляю запрос на обновление токенов')
 
-            const res = await axios.post(`http://localhost:8000/auth/jwt/refresh/`, body, config)
+            const res = await axios.post(`http://localhost:8000/api/auth/jwt/refresh/`, body, config)
 
             if (res.data.code !== 'token_not_valid') {
                 console.log('refresh токен сработал, новые токены получены')
@@ -119,7 +119,7 @@ export const loadUser = () => async dispatch => {
         };
 
         try {
-            const res = await axios.get(`http://localhost:8000/auth/users/me/`, config);
+            const res = await axios.get(`http://localhost:8000/api/auth/users/me/`, config);
 
             dispatch({
                 type: USER_LOADED_SUCCESS,
@@ -145,7 +145,7 @@ export const login = (email, password) => async dispatch => {
     };
     try {
         const res = await axios.post(
-            `http://localhost:8000/auth/jwt/create/`,
+            `http://localhost:8000/api/auth/jwt/create/`,
             {
                 email: email,
                 password: password,
@@ -174,7 +174,7 @@ export const password_reset = (email) => async dispatch => {
     };
     const body = JSON.stringify({ email });
     try {
-        await axios.post(`http://localhost:8000/auth/users/reset_password/`, body, config);
+        await axios.post(`http://localhost:8000/api/auth/users/reset_password/`, body, config);
         dispatch({
             type: PASSWORD_RESET_SUCCESS
         });
@@ -194,7 +194,7 @@ export const password_reset_confirm = (uid, token, new_password, re_new_password
     const body = JSON.stringify({ uid, token, new_password, re_new_password });
     console.log(body)
     try {
-        await axios.post(`http://localhost:8000/auth/users/reset_password_confirm/`, body, config);
+        await axios.post(`http://localhost:8000/api/auth/users/reset_password_confirm/`, body, config);
         dispatch({
             type: PASSWORD_RESET_CONFIRM_SUCCESS
         });

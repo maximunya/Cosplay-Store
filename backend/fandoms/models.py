@@ -22,7 +22,8 @@ class Fandom(models.Model):
 	fandom_type = models.CharField(max_length=10, choices=FANDOM_TYPE_CHOICES)
 	image = models.ImageField(
 		upload_to=get_upload_to,
-		default="fandom_images/no-photo-available-icon-20.jpg"
+		null=True,
+		blank=True
 	)
 
 	def __str__(self):
@@ -40,14 +41,15 @@ class Fandom(models.Model):
 class Character(models.Model):
 	"""Character model"""
 	def get_upload_to(instance, filename):
-		return f"character_images/{instance.fandom.slug}/{instance.slug}/{filename}"
+		return f"character_images/{instance.fandom.slug}/{filename}"
 	
 	slug = models.SlugField(unique=True, max_length=255, blank=True)
 	name = models.CharField(max_length=255, unique=True)
 	fandom = models.ForeignKey(Fandom, on_delete=models.CASCADE, related_name='characters')
 	image = models.ImageField(
 		upload_to=get_upload_to,
-		default="character_images/no-photo-available-icon-20.jpg"
+		null=True,
+		blank=True
 	)
 
 	def __str__(self):

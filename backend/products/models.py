@@ -94,7 +94,8 @@ class Product(models.Model):
 		if not self.slug:
 			formatted_slug = f'{slugify(self.title, allow_unicode=True)[:100]}-{get_random_string(length=10, allowed_chars="1234567890")}'
 			self.slug = formatted_slug
-		return super().save(*args, **kwargs)
+
+		super().save(*args, **kwargs)
 
 
 class ProductImage(models.Model):
@@ -106,7 +107,8 @@ class ProductImage(models.Model):
 	product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='product_images')
 	image = models.ImageField(
 		upload_to=get_upload_to,
-		default="product_images/no-photo-available-icon-20.jpg"
+		null=True,
+		blank=True
 	)
 
 	def __str__(self):

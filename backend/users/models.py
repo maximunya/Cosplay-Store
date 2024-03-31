@@ -17,7 +17,8 @@ class User(AbstractUser):
 	birth_date = models.DateField(null=True, blank=True)
 	profile_pic = models.ImageField(
 		upload_to=get_upload_to,
-		default="profile_pictures/no-photo-available-icon-20.jpg"
+		null=True,
+		blank=True
 	)
 	USERNAME_FIELD = 'email'
 	REQUIRED_FIELDS = ['username']

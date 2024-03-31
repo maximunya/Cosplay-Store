@@ -6,11 +6,10 @@ from django.db.models import (
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 
-from rest_framework import generics, status, filters
+from rest_framework import generics, status, filters, parsers
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.exceptions import ValidationError
 from django_filters.rest_framework import DjangoFilterBackend
 from django_elasticsearch_dsl.search import Search
 
@@ -35,15 +34,9 @@ class StoreCreateView(generics.CreateAPIView):
     permission_classes = (IsAuthenticated,)
     queryset = Store.objects.select_related('owner').all()
 
-    @transaction.atomic
     def perform_create(self, serializer):
-        user = self.request.user
-
-        if Store.objects.filter(owner=user).exists():
-            raise ValidationError("You cannot create more than 1 store.")
-        
+        user = self.request.user     
         store = serializer.save(owner=user)
-        Employee.objects.create(user=user, store=store, is_admin=True, is_owner=True)
 
 
 class StoreDetailPrivateView(generics.RetrieveUpdateAPIView):
@@ -87,7 +80,7 @@ class StoreDetailPublicView(generics.RetrieveAPIView):
         order_by = self.request.query_params.get('ordering', '-total_ordered_quantity')
         ordering = order_by if order_by in self.ordering_fields else '-total_ordered_quantity'
 
-        search = Search(index='products')
+        search = Search(index='products').extra(size=100)
 
         if search_query:
             search = search.query("multi_match",
@@ -281,7 +274,7 @@ class StoreProductListView(generics.ListAPIView):
         search_query = self.request.query_params.get('q', '')
         filters = {k: v for k, v in self.request.query_params.items() if k in self.filter_fields}
 
-        search = Search(index='products')
+        search = Search(index='products').extra(size=1000)
 
         if search_query:
             search = search.query("multi_match",
@@ -333,10 +326,15 @@ class StoreProductDetailView(generics.RetrieveUpdateDestroyAPIView):
                 ).filter(seller=store)
     
     def perform_update(self, serializer):
-        instance = serializer.save()
-        if instance.in_stock == 0:
-            instance.is_active = False
-        instance.save()
+        product = self.get_object()
+        product_images = serializer.validated_data.get('product_images', [])
+        
+        if product_images:
+            product.product_images.all().delete()
+            for image in product_images:
+                ProductImage.objects.create(product=product, image=image)
+
+        serializer.save()
     
 
 class ProductCreateView(generics.CreateAPIView):
@@ -348,17 +346,11 @@ class ProductCreateView(generics.CreateAPIView):
         store = self.store
         product = serializer.save(seller=store)
 
-        if product.in_stock == 0:
-            product.is_active = False
-            product.save()
-
         product_images = serializer.validated_data.get('product_images', [])
 
         if product_images:
             for image in product_images:
                 ProductImage.objects.create(product=product, image=image)
-        else:
-            ProductImage.objects.create(product=product)
 
     
 class AnswerCreateView(generics.CreateAPIView):

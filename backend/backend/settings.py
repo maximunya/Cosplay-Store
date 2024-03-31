@@ -19,7 +19,7 @@ INTERNAL_IPS = [
     config('INTERNAL_IP'),
 ]
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["*"]
 
 
 # Application definition
@@ -33,6 +33,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.postgres',
 
+    'drf_redesign',
     'rest_framework',
     'django_filters',
     'crispy_forms',
@@ -78,14 +79,6 @@ REST_FRAMEWORK = {
     'DEFAULT_FILTER_BACKENDS': (
         'django_filters.rest_framework.DjangoFilterBackend',
     ),
-}
-
-CRISPY_TEMPLATE_PACK = 'bootstrap4'
-
-ELASTICSEARCH_DSL = {
-    'default': {
-        'hosts': 'http://localhost:9200',
-    },
 }
 
 SIMPLE_JWT = {
@@ -142,15 +135,16 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'backend.wsgi.application'
+CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
+WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
 DATABASES = {
     'default': {
-        'ENGINE': config('DB_ENGINE'),
+        'ENGINE': "django.db.backends.postgresql_psycopg2",
         'NAME': config('DB_NAME'),
         'USER': config('DB_USER'),
         'PASSWORD': config('DB_PASSWORD'),
@@ -159,6 +153,18 @@ DATABASES = {
     }
 }
 
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': f'http://{config("ELASTICSEARCH_DSL_HOST")}:9200',
+    },
+}
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": config('CACHES_LOCATION'),
+    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -205,15 +211,15 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
-#Email settings
-EMAIL_BACKEND = config('EMAIL_BACKEND')
+# Email settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = config('EMAIL_HOST')
 EMAIL_PORT = config('EMAIL_PORT')
 EMAIL_HOST_USER = config('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 
-#Twilio settings
+# Twilio settings
 TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN')
 TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER')

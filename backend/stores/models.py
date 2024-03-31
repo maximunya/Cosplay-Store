@@ -1,6 +1,8 @@
-from django.db import models
+from django.db import models, transaction
 from django.core.validators import MinLengthValidator
 from django.utils.text import slugify
+
+from rest_framework.exceptions import ValidationError
 
 from users.models import User
 
@@ -30,9 +32,8 @@ class Store(models.Model):
 	is_admin_store = models.BooleanField(default=False)
 	logo = models.ImageField(
 		upload_to=get_upload_to,
-		default="store_logos/no-photo-available-icon-20.jpg",
-		null=False,
-		blank=False
+		null=True,
+		blank=True
 	)
 	bio = models.TextField(max_length=300, blank=True, null=True)
 	created_at = models.DateTimeField(auto_now_add=True)
@@ -43,7 +44,15 @@ class Store(models.Model):
 	def save(self, *args, **kwargs):
 		if not self.slug:
 			self.slug = slugify(self.name, allow_unicode=True)
-		return super().save(*args, **kwargs)
+
+		if not self.pk:
+			if Store.objects.filter(owner=self.owner).exists():
+				raise ValidationError("You cannot create more than 1 store.")
+		
+		super().save(*args, **kwargs)
+			
+		if not Employee.objects.filter(user=self.owner, store=self).exists():
+			Employee.objects.create(user=self.owner, store=self, is_admin=True, is_owner=True)
 	
 
 class Employee(models.Model):

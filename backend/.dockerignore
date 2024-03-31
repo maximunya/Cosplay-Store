@@ -1,0 +1,17 @@
+*.pyc
+__pycache__/
+venv/
+env/
+.venv/
+.env/
+.vscode/
+.env
+.env.template
+.env.local
+logs/
+*.log
+*.bak
+*.swp
+.idea/
+.editorconfig
+celerybeat-schedule

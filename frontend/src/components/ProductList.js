@@ -12,12 +12,13 @@ function ProductList({ access }) {
 		axios.get(`http://127.0.0.1:8000/api/products/`, {
 			headers: {
 				'Content-Type': 'application/json',
-				'Authorization': `JWT ${access}`,
+				//'Authorization': `JWT ${access}`,
 				'Accept': 'application/json'
 			},
 			})
 			.then(response => {
-				setProducts(response.data);
+				console.log(response.data)
+				setProducts(response.data.results);
 				setIsLoaded(true);
 			})
 			.catch(error => {
@@ -30,23 +31,33 @@ function ProductList({ access }) {
 		return <div></div>
 	} else {
 		return (
-			<div>
-				<div className="container mt-5">	
-					<ul>
-						{Array.from(products).map(product => (
-							<><li key={product.id} className="product_item">
-								<h3>[{product.product_type}] &thinsp;<Link to={`/product/${product.id}`}>{product.title}</Link></h3>
-								{(product.product_type !== "Shoes") ?
-									<p>Seller: {product.seller} | Character: {product.cosplay_character} |
-										Size: {product.size}</p> :
-									<p>Seller: {product.seller} | Character: {product.cosplay_character} |
-										Shoes Size: {product.shoes_size}</p>}
-							</li><br></br></>
-						))}
-					</ul>
-				</div>
+			<div className="container mt-5 mb-2">
+			  <h2 className="mb-4">Список товаров</h2>
+			  <div className="row">
+				{products.map(product => (
+				  <div key={product.id} className="col-lg-3 col-md-6 mb-4">
+					<Link to={`/product/${product.slug}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+					  <div className="card h-100">
+						{product.product_images.length > 0 ? (
+						  <img className="card-img-top" src={product.product_images[0].image} alt={product.title} />
+						) : (
+						  <img className="card-img-top" src="/no-photo-available-icon.jpg" alt="No Photo Available" />
+						)}
+						<div className="card-body">
+						  <h4 className="card-title">{product.title}</h4>
+						  <p className="card-text">{product.product_type}</p>
+						  <p className="card-text">Price: ${product.price}</p>
+						</div>
+						<div className="card-footer">
+						  <small className="text-muted">Seller: {product.seller.name}</small>
+						</div>
+					  </div>
+					</Link>
+				  </div>
+				))}
+			  </div>
 			</div>
-		);
+		  );
 	}
 }
 

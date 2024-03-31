@@ -5,11 +5,13 @@ package-lock.json
 yarn-error.log
 venv/
 env/
+static/
 .venv/
 .env/
 .vscode/
 .env
 .env.local
+.env.docker
 logs/
 *.log
 *.bak

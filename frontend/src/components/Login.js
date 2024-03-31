@@ -48,7 +48,7 @@ function Login({ login, isAuthenticated }) {
                             value={password}
                             onChange={e => setPassword(e.target.value)}
                             required
-                            minLength='8'
+                            minLength='5'
                         />
                     </div>
                     <div className="form-check mt-3">

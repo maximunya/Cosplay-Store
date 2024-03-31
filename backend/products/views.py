@@ -4,7 +4,6 @@ from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 
 from rest_framework import generics
-from django_elasticsearch_dsl.search import Search
 
 from common.serializers import (
     ProductSerializer,
@@ -13,6 +12,7 @@ from common.serializers import (
     AnswerSerializer
 )
 
+from .documents import ProductDocument
 from .models import Product, Review, Answer
 from .serializers import ReviewCreateSerializer
 from . import permissions
@@ -50,7 +50,7 @@ class ProductListView(generics.ListAPIView):
         ordering = order_by if order_by in self.ordering_fields else '-total_ordered_quantity'
         filters = {k: v for k, v in self.request.query_params.items() if k in self.filter_fields}
 
-        search = Search(index='products')
+        search = ProductDocument.search().extra(size=1000)
 
         # Filtering
         for field, value in filters.items():
