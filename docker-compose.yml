@@ -85,7 +85,7 @@ services:
     build:
       context: ./backend
     container_name: celery-beat
-    command: celery -A prediction beat --loglevel=info
+    command: celery -A backend beat --loglevel=info
     depends_on:
       postgres:
         condition: service_started
