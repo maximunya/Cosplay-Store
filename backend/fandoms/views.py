@@ -21,6 +21,7 @@ class FandomCreateView(generics.CreateAPIView):
 
 
 class FandomListView(generics.ListAPIView):
+    '''Returns a list of Fandoms'''
     serializer_class = serializers.FandomListSerializer
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter)
     filterset_fields = {'fandom_type': ['exact']}

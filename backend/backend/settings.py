@@ -1,5 +1,6 @@
 import os
 
+from celery.schedules import crontab
 from pathlib import Path
 from datetime import timedelta
 from decouple import config
@@ -33,7 +34,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.postgres',
 
-    'drf_redesign',
     'rest_framework',
     'django_filters',
     'crispy_forms',
@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'djoser',
     'debug_toolbar',
+    'drf_yasg',
 
     'common',
     'users',
@@ -185,7 +186,7 @@ AUTH_USER_MODEL = "users.User"
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Moscow'
 
 USE_I18N = True
 
@@ -223,3 +224,13 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN')
 TWILIO_PHONE_NUMBER = config('TWILIO_PHONE_NUMBER')
+
+# Celery
+CELERY_BROKER_URL = config('CELERY_BROKER_URL')
+CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND')
+CELERY_BEAT_SCHEDULE = {
+    'send_daily_notification': {
+        'task': 'products.tasks.send_daily_offer_email',
+        'schedule': crontab(minute=15, hour=18)
+    },
+}

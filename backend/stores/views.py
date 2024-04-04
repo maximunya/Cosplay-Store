@@ -16,17 +16,18 @@ from django_elasticsearch_dsl.search import Search
 from products.models import Product, Review, ProductImage
 from products.serializers import ProductCreateSerializer, AnswerCreateSerializer
 from orders.models import OrderItem, ORDER_ITEM_STATUS_CHOICES
-from orders.services import (
-    send_order_item_sent_notifications,
-    send_order_item_received_notifications,
-    send_order_item_cancelled_notifications
-)
 from cards.models import Transaction
 from common.serializers import StoreListSerializer
 
 from .models import Store, Employee
 from . import serializers
 from . import permissions
+from .tasks import (
+    send_order_item_sent_notifications,
+    send_order_item_received_notifications,
+    send_order_item_cancelled_notifications,
+    update_full_order_status
+)
 
 
 class StoreCreateView(generics.CreateAPIView):
@@ -371,11 +372,10 @@ class AnswerCreateView(generics.CreateAPIView):
 @transaction.atomic
 def update_order_status(request, slug, order_item_slug, new_status):
     store = get_object_or_404(Store, slug=slug)
-    order_item = get_object_or_404(OrderItem.objects.select_related('order__customer'), 
+    order_item = get_object_or_404(OrderItem.objects.select_related('order'), 
                                    slug=order_item_slug, 
                                    product__seller=store)
     order = order_item.order
-    customer = order.customer
 
     try:
         new_status = int(new_status)
@@ -385,31 +385,21 @@ def update_order_status(request, slug, order_item_slug, new_status):
     if new_status not in [0, 2, 3, 4]:
         return Response({'error': 'Invalid status value.'}, status=status.HTTP_400_BAD_REQUEST)
 
+    if new_status == order_item.status:
+        return Response({'error': 'The new status is the same as the current status of the order item.'},
+                        status=status.HTTP_400_BAD_REQUEST)
+    
     order_item.status = new_status
     order_item.save()
 
     if new_status == 3:
-        send_order_item_sent_notifications(customer, order_item)
+        send_order_item_sent_notifications.delay(order_item.id)
     if new_status == 4:
-        send_order_item_received_notifications(customer, order_item)
+        send_order_item_received_notifications.delay(order_item.id)
     if new_status == 0:
-        send_order_item_cancelled_notifications(customer, order_item)
+        send_order_item_cancelled_notifications.delay(order_item.id)
 
-    order_item_statuses = list(order.order_items.values_list('status', flat=True))
-    status_counts = {status: order_item_statuses.count(str(status)) for status, _ in ORDER_ITEM_STATUS_CHOICES}
-
-    if status_counts[0] == len(order_item_statuses):
-        order.status = 0
-    elif status_counts[1] > 0:
-        order.status = 1
-    elif status_counts[2] > 0:
-        order.status = 2
-    elif status_counts[3] > 0:
-        order.status = 3
-    elif status_counts[4] == (len(order_item_statuses) - status_counts[0]):
-        order.status = 4
-
-    order.save()
+    update_full_order_status.delay(order.id)
 
     return Response({'message': 'Order status updated successfully.'}, status=status.HTTP_200_OK)
 

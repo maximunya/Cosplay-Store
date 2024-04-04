@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Cosplay Offer</title>
+</head>
+<body>
+    <p>Hi, {{ user.first_name|default_if_none:user.username }}!</p>
+    <p>We have selected several items especially for you:</p>
+    <ul>
+        {% for product in products %}
+            <li><a href="http://localhost:8000/api/products/{{ product.slug }}">{{ product.title }}</a></li>
+        {% endfor %}
+    </ul>
+    <p>Check them out and happy shopping!</p>
+</body>
+</html>

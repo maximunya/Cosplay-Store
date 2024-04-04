@@ -25,7 +25,7 @@ from stores.models import Store
 from . import serializers
 from .models import Product, Order, OrderItem
 from .permissions import IsCustomerOrAdminUser, IsCustomerOrSellerOrAdminUser
-from .services import (
+from .tasks import (
     send_order_created_notifications, 
     send_order_paid_notifications
 )
@@ -91,8 +91,10 @@ class OrderCreateView(APIView):
     @transaction.atomic
     def post(self, request):
         user = request.user
+        user_is_authenticated = user.is_authenticated
+        
         # Валидация формы для авторизованного и неавторизованного пользователя
-        if user.is_authenticated:
+        if user_is_authenticated:
             serializer = serializers.OrderCreateAuthenticatedSerializer(data=request.data, 
                                                                         context={'request': request})
             user_addresses = user.addresses.all()
@@ -103,7 +105,7 @@ class OrderCreateView(APIView):
             session_cart_items = cart.get_cart_items()
             
         if serializer.is_valid():
-            if user.is_authenticated:
+            if user_is_authenticated:
                 user_data = {
                     'name': user.first_name if user.first_name else serializer.validated_data.get('name'),
                     'email': user.email,
@@ -127,7 +129,7 @@ class OrderCreateView(APIView):
             authenticated_card = None
             authenticated_address = None
 
-            if user.is_authenticated:
+            if user_is_authenticated:
                 if not user.first_name or not user.phone_number:
                     if not user.first_name:
                         user.first_name = user_data['name']
@@ -141,7 +143,7 @@ class OrderCreateView(APIView):
                     authenticated_address = Address.objects.create(user=user, address=user_data['address'])
 
             # Создание предметов заказа
-            if user.is_authenticated:
+            if user_is_authenticated:
                 db_cart_items = CartItem.objects.filter(user=user).prefetch_related('product')
 
                 if not db_cart_items:
@@ -201,7 +203,7 @@ class OrderCreateView(APIView):
                 cart.clear()
 
             # Отправка SMS и Email об успешном оформлении заказа через Celery
-            send_order_created_notifications(user, order)
+            send_order_created_notifications.delay(user_is_authenticated, order.id)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response({'message': 'Your order has been successfully created.'}, status=status.HTTP_201_CREATED)
@@ -262,6 +264,7 @@ class OrderItemView(generics.RetrieveAPIView):
 @transaction.atomic
 def create_order_payment(request, order_id):
     user = request.user
+    user_is_authenticated = user.is_authenticated
     main_store = Store.objects.get(id=1)
 
     order_queryset = Order.objects.prefetch_related(Prefetch(
@@ -270,7 +273,7 @@ def create_order_payment(request, order_id):
         ).select_related('card', 'customer')
     order = get_object_or_404(order_queryset, pk=order_id)
 
-    if (order.customer and user.is_authenticated and user == order.customer) or not (order.customer and user.is_authenticated):
+    if (order.customer and user_is_authenticated and user == order.customer) or not (order.customer and user_is_authenticated):
         card = order.card
         payment_amount = order.total_order_price
 
@@ -329,7 +332,7 @@ def create_order_payment(request, order_id):
         order.status = 2
         order.save()
 
-        send_order_paid_notifications(user, order)
+        send_order_paid_notifications.delay(user_is_authenticated, order.id)
     else:
         return Response({'error': 'You cannot pay for this order.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
     
