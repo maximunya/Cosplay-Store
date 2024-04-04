@@ -12,7 +12,6 @@ function ProductList({ access }) {
 		axios.get(`http://127.0.0.1:8000/api/products/`, {
 			headers: {
 				'Content-Type': 'application/json',
-				//'Authorization': `JWT ${access}`,
 				'Accept': 'application/json'
 			},
 			})
@@ -46,7 +45,7 @@ function ProductList({ access }) {
 						<div className="card-body">
 						  <h4 className="card-title">{product.title}</h4>
 						  <p className="card-text">{product.product_type}</p>
-						  <p className="card-text">Price: ${product.price}</p>
+						  <p className="card-text">Price: {product.price}</p>
 						</div>
 						<div className="card-footer">
 						  <small className="text-muted">Seller: {product.seller.name}</small>

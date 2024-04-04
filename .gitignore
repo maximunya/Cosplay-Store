@@ -18,3 +18,4 @@ logs/
 *.swp
 .idea/
 .editorconfig
+celerybeat-schedule

@@ -51,7 +51,7 @@ function ProductDetail({ access }) {
                 </div>
                 <div className="col-lg-6">
                     <h2>{product.title}</h2>
-                    <p><strong>Price:</strong> ${product.price}</p>
+                    <p><strong>Price:</strong> {product.price}</p>
                     {product.discount && (
                         <p><strong>Discount:</strong> {product.discount}%</p>
                     )}

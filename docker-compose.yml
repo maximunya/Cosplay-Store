@@ -13,11 +13,12 @@ services:
     volumes:
       - pg_data:/var/lib/postgresql/data
 
+
   elasticsearch:
     image: elasticsearch:8.12.2
     container_name: elasticsearch
     environment:
-      - "ES_JAVA_OPTS=-Xms1g -Xmx1g"
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
       - discovery.type=single-node
       - xpack.security.enabled=false
     ports:
@@ -28,12 +29,18 @@ services:
       timeout: 10s
       retries: 5
       start_period: 10s
+    volumes:
+      - elasticsearch_data:/usr/share/elasticsearch/data
+
 
   redis:
     image: redis:latest
     container_name: redis
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+
 
   backend:
     build:
@@ -52,7 +59,63 @@ services:
     env_file:
       - .env.docker
     volumes:
+      - ./backend:/app
       - static_volume:/app/static
+
+
+  celery:
+    build:
+      context: ./backend
+    container_name: celery
+    command: celery -A backend worker --loglevel=info
+    depends_on:
+      postgres:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env.docker
+    volumes:
+      - ./backend:/app
+
+
+  celery-beat:
+    build:
+      context: ./backend
+    container_name: celery-beat
+    command: celery -A prediction beat --loglevel=info
+    depends_on:
+      postgres:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    env_file:
+      - .env.docker
+    volumes:
+      - ./backend:/app
+
+
+  flower:
+    build:
+      context: ./backend
+    container_name: flower
+    command: celery -A backend flower
+    ports:
+      - "5555:5555"
+    depends_on:
+      postgres:
+        condition: service_started
+      elasticsearch:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./backend:/app
+
 
   nginx:
     image: nginx:latest
@@ -65,6 +128,7 @@ services:
     depends_on:
       - backend
 
+
   frontend:
     build:
       context: ./frontend
@@ -72,6 +136,9 @@ services:
     ports:
       - "3000:3000"
 
+
 volumes:
   static_volume:
   pg_data:
+  redis_data:
+  elasticsearch_data:
