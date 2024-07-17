@@ -1,13 +1,17 @@
+import uuid
+import json
+
 from django.db import transaction
 from django.db.models import Prefetch
 from django.shortcuts import get_object_or_404
+from django.conf import settings
 
 from rest_framework import generics, status, filters
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from django_filters.rest_framework import DjangoFilterBackend
+from yookassa import Configuration, Payment, Webhook
 
 from common.serializers import CardListSerializer
 
@@ -20,6 +24,10 @@ from .serializers import (
 )
 from .permissions import IsOwner, CanSeeTransaction, CanCreateDeposit
 from .models import Card, Transaction
+
+
+Configuration.account_id = settings.YOOKASSA_SHOP_ID
+Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
 
 
 class CardCreateView(generics.CreateAPIView):
@@ -112,19 +120,75 @@ class TransactionListView(generics.ListAPIView):
 
 @api_view(['POST'])
 @permission_classes([CanCreateDeposit])
+@transaction.atomic
 def create_deposit(request, card_uuid, amount):
+    user = request.user
     if amount > 0:
+        amount_with_comission = round(amount * 1.035)
+        card = get_object_or_404(Card, uuid=card_uuid)
+        transaction = Transaction.objects.create(card=card, 
+                                                 transaction_type='Deposit', 
+                                                 amount=amount,
+                                                 status="Pending")
         try:
-            with transaction.atomic():
-                card = get_object_or_404(Card, uuid=card_uuid)
-                card.balance += amount
-                card.save()
-                Transaction.objects.create(card=card, 
-                                           transaction_type='Deposit', 
-                                           amount=amount)
-            return Response({'status': 'Success'}, status=status.HTTP_201_CREATED)
+            payment = Payment.create({
+                "amount": {
+                    "value": str(amount_with_comission),
+                    "currency": "RUB"
+                },
+                "payment_method_data": {
+                    "type": "bank_card"
+                },
+                "capture": True,
+                "test": True,
+                "refundable": False,
+                "metadata": {
+                    'transaction_uuid': str(transaction.uuid),
+                    'user_id': user.id,
+                    'card_uuid': str(card_uuid), 
+                },
+                "confirmation": {
+                    "type": "redirect",
+                    "return_url": f"http://localhost:8000/api/cards/{card_uuid}"
+                },
+                "description": f"Deposit create: User: {user.username} - Card: ****{card.card_number[12:]} -  Amount: {amount} RUB",
+            }, uuid.uuid4())
+
+            redirect_url = payment.confirmation.confirmation_url
+            print(redirect_url)
+            return Response({'redirect_url': redirect_url}, status=status.HTTP_302_FOUND)
+
         except Exception as e:
             print(f"Error creating deposit: {e}")
             return Response({'status': 'Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
         return Response({'error': 'Deposit amount cannot be non-positive or equals 0.'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@transaction.atomic
+def handle_payment_callback(request):
+    response = json.loads(request.body)
+    print(response)
+
+    transaction = get_object_or_404(Transaction, uuid=response['object']['metadata']['transaction_uuid'])
+    card = get_object_or_404(Card, uuid=response['object']['metadata']['card_uuid'])
+
+    if response['event'] == 'payment.succeeded':
+        amount = response['object']['income_amount']['value']
+        card.balance += int(float(amount))
+        card.save()
+
+        transaction.status = "Success"
+        transaction.save()
+
+        return Response({'status': 'Success'}, status=status.HTTP_200_OK)
+    
+    if response['event'] == 'payment.canceled':
+        transaction.status = "Canceled"
+        transaction.save()
+        return Response({'status': 'Canceled'}, status=status.HTTP_200_OK)
+    
+    else:
+        print(response)
+        return Response({'status': 'Error'}, status=status.HTTP_400_BAD_REQUEST)

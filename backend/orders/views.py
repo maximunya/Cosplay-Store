@@ -4,6 +4,7 @@ from django.db.models import Count, Avg, Sum, Prefetch
 from django.contrib.auth import get_user_model
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django.conf import settings
 
 from rest_framework import generics, status, filters
 from rest_framework.views import APIView
@@ -11,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import api_view
 from django_filters.rest_framework import DjangoFilterBackend
+from yookassa import Configuration, Payment
 
 from cart.cart import Cart
 from cart.models import CartItem
@@ -32,6 +34,9 @@ from .tasks import (
 
 
 User = get_user_model()
+
+Configuration.account_id = settings.YOOKASSA_SHOP_ID
+Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
 
 
 class OrderCreateView(APIView):
@@ -92,7 +97,7 @@ class OrderCreateView(APIView):
     def post(self, request):
         user = request.user
         user_is_authenticated = user.is_authenticated
-        
+
         # Валидация формы для авторизованного и неавторизованного пользователя
         if user_is_authenticated:
             serializer = serializers.OrderCreateAuthenticatedSerializer(data=request.data, 

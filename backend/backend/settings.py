@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'djoser',
     'debug_toolbar',
     'drf_yasg',
+    'yookassa',
 
     'common',
     'users',
@@ -231,6 +232,12 @@ CELERY_RESULT_BACKEND = config('CELERY_RESULT_BACKEND')
 CELERY_BEAT_SCHEDULE = {
     'send_daily_notification': {
         'task': 'products.tasks.send_daily_offer_email',
-        'schedule': crontab(minute=15, hour=18)
+        'schedule': crontab(minute=0, hour=18)
     },
 }
+
+# Yookassa
+YOOKASSA_SECRET_KEY = config('YOOKASSA_SECRET_KEY')
+YOOKASSA_SHOP_ID = config('YOOKASSA_SHOP_ID')
+
+CSRF_TRUSTED_ORIGINS = ['http://localhost', 'http://127.0.0.1', 'https://50c0-178-66-218-220.ngrok-free.app']

@@ -11,4 +11,5 @@ urlpatterns = [
     path('<uuid:card_uuid>/create-deposit/<int:amount>/', views.create_deposit, name='create-deposit'),
     path('transactions/', views.TransactionListView.as_view(), name='user-transaction-list'),
     path('transactions/<uuid:uuid>/', views.TransactionDetailView.as_view(), name='transaction-detail'),
+    path('handle_payment_callback/', views.handle_payment_callback, name='handle-payment-callback'),
 ]

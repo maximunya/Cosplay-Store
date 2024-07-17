@@ -10,7 +10,7 @@
     <p>We have selected several items especially for you:</p>
     <ul>
         {% for product in products %}
-            <li><a href="http://localhost:8000/api/products/{{ product.slug }}">{{ product.title }}</a></li>
+            <li><a href="http://localhost:8000/api/products/{{ product.slug }}">{{ product.title }}: {{ product.price }}₽</a></li>
         {% endfor %}
     </ul>
     <p>Check them out and happy shopping!</p>

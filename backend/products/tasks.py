@@ -18,7 +18,7 @@ def send_daily_offer_email():
     users = User.objects.filter(is_active=True).only('email', 'username', 'first_name').order_by('?')
 
     for user in users:
-        products = Product.objects.only('slug', 'title').filter(is_active=True).order_by('?')[:5]
+        products = Product.objects.only('slug', 'title', 'price').filter(is_active=True).order_by('?')[:5]
         context = {
             'user': user,
             'products': products,
