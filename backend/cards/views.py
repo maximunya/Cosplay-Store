@@ -11,12 +11,12 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 from django_filters.rest_framework import DjangoFilterBackend
-from yookassa import Configuration, Payment, Webhook
+from yookassa import Configuration, Payment
 
 from common.serializers import CardListSerializer
 
 from .serializers import (
-    CardDetailSerializer, 
+    CardDetailSerializer,
     CardCreateSerializer,
     TransactionListSerializer,
     TransactionDetailSerializer,
@@ -24,7 +24,6 @@ from .serializers import (
 )
 from .permissions import IsOwner, CanSeeTransaction, CanCreateDeposit
 from .models import Card, Transaction
-
 
 Configuration.account_id = settings.YOOKASSA_SHOP_ID
 Configuration.secret_key = settings.YOOKASSA_SECRET_KEY
@@ -37,13 +36,13 @@ class CardCreateView(generics.CreateAPIView):
     def perform_create(self, serializer):
         user = self.request.user
         serializer.save(user=user)
-        
+
 
 class CardListView(generics.ListAPIView):
     serializer_class = CardListSerializer
     permission_classes = (IsAuthenticated,)
     filter_backends = (DjangoFilterBackend, filters.OrderingFilter)
-    filterset_fields = {'balance': ['gt', 'lt', 'exact'],}
+    filterset_fields = {'balance': ['gt', 'lt', 'exact'], }
     ordering = ['-balance', 'created_at']
     ordering_fields = ['balance', 'created_at', 'name']
 
@@ -111,7 +110,7 @@ class TransactionListView(generics.ListAPIView):
         'amount', 'timestamp', 'status',
         'transaction_type', 'card__name'
     ]
-    
+
     def get_queryset(self):
         user = self.request.user
         return Transaction.objects.select_related(
@@ -126,8 +125,8 @@ def create_deposit(request, card_uuid, amount):
     if amount > 0:
         amount_with_comission = round(amount * 1.035)
         card = get_object_or_404(Card, uuid=card_uuid)
-        transaction = Transaction.objects.create(card=card, 
-                                                 transaction_type='Deposit', 
+        transaction = Transaction.objects.create(card=card,
+                                                 transaction_type='Deposit',
                                                  amount=amount,
                                                  status="Pending")
         try:
@@ -145,7 +144,7 @@ def create_deposit(request, card_uuid, amount):
                 "metadata": {
                     'transaction_uuid': str(transaction.uuid),
                     'user_id': user.id,
-                    'card_uuid': str(card_uuid), 
+                    'card_uuid': str(card_uuid),
                 },
                 "confirmation": {
                     "type": "redirect",
@@ -162,7 +161,8 @@ def create_deposit(request, card_uuid, amount):
             print(f"Error creating deposit: {e}")
             return Response({'status': 'Error'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
     else:
-        return Response({'error': 'Deposit amount cannot be non-positive or equals 0.'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Deposit amount cannot be non-positive or equals 0.'},
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -183,12 +183,12 @@ def handle_payment_callback(request):
         transaction.save()
 
         return Response({'status': 'Success'}, status=status.HTTP_200_OK)
-    
+
     if response['event'] == 'payment.canceled':
         transaction.status = "Canceled"
         transaction.save()
         return Response({'status': 'Canceled'}, status=status.HTTP_200_OK)
-    
+
     else:
         print(response)
         return Response({'status': 'Error'}, status=status.HTTP_400_BAD_REQUEST)

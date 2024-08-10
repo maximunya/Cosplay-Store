@@ -1,37 +1,31 @@
 from collections import defaultdict
 
-from django.db.models import Count, Avg, Sum, Prefetch
-from django.contrib.auth import get_user_model
-from django.shortcuts import get_object_or_404
-from django.db import transaction
 from django.conf import settings
-
-from rest_framework import generics, status, filters
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.decorators import api_view
+from django.contrib.auth import get_user_model
+from django.db import transaction
+from django.db.models import Avg, Count, Prefetch, Sum
+from django.shortcuts import get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import filters, generics, status
+from rest_framework.decorators import api_view
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
 from yookassa import Configuration, Payment
 
+from cards.models import Card, Transaction
 from cart.cart import Cart
 from cart.models import CartItem
-from cart.serializers import (
-    CartItemAuthenticatedSerializer,
-    CartItemSerializer
-)
-from users.models import Address
-from cards.models import Card, Transaction
+from cart.serializers import (CartItemAuthenticatedSerializer,
+                              CartItemSerializer)
 from stores.models import Store
+from users.models import Address
 
 from . import serializers
-from .models import Product, Order, OrderItem
+from .models import Order, OrderItem, Product
 from .permissions import IsCustomerOrAdminUser, IsCustomerOrSellerOrAdminUser
-from .tasks import (
-    send_order_created_notifications, 
-    send_order_paid_notifications
-)
-
+from .tasks import (send_order_created_notifications,
+                    send_order_paid_notifications)
 
 User = get_user_model()
 
@@ -47,16 +41,16 @@ class OrderCreateView(APIView):
         if user.is_authenticated:
             cart_items = CartItem.objects.prefetch_related(
                 Prefetch('product', queryset=Product.objects.annotate(
-                reviews_count=Count('reviews', distinct=True),
-                average_score=Avg('reviews__score'),
-                total_ordered_quantity=Sum('ordered_products__quantity')
-            ).prefetch_related('reviews', 'product_images'
-            ).select_related('seller', 'cosplay_character__fandom'
-            ).filter(is_active=True))).filter(user=user)
-            
+                    reviews_count=Count('reviews', distinct=True),
+                    average_score=Avg('reviews__score'),
+                    total_ordered_quantity=Sum('ordered_products__quantity')
+                ).prefetch_related('reviews', 'product_images'
+                                   ).select_related('seller', 'cosplay_character__fandom'
+                                                    ).filter(is_active=True))).filter(user=user)
+
             if not cart_items:
                 return Response({'error': 'Your cart is empty.'}, status=status.HTTP_400_BAD_REQUEST)
-            
+
             cart_length = sum(item.quantity for item in cart_items)
             total_cart_price = sum(item.get_total_price() for item in cart_items)
 
@@ -69,8 +63,8 @@ class OrderCreateView(APIView):
                 'phone_number': user.phone_number,
                 'addresses': user.addresses.all(),
                 'cards': user.cards.all(),
-                }
-            
+            }
+
         else:
             cart = Cart(request)
             if not cart:
@@ -78,7 +72,7 @@ class OrderCreateView(APIView):
             cart_length = cart.__len__()
             cart_items = cart.get_cart_items()
             total_cart_price = cart.get_total_cart_price()
-    
+
             order_data = {
                 'cart_length': cart_length,
                 'cart_items': CartItemSerializer(cart_items, many=True).data,
@@ -88,8 +82,8 @@ class OrderCreateView(APIView):
                 'phone_number': '',
                 'addresses': '',
                 'cards': '',
-                }
-        
+            }
+
         serializer = serializers.OrderCartSerializer(order_data)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -100,7 +94,7 @@ class OrderCreateView(APIView):
 
         # Валидация формы для авторизованного и неавторизованного пользователя
         if user_is_authenticated:
-            serializer = serializers.OrderCreateAuthenticatedSerializer(data=request.data, 
+            serializer = serializers.OrderCreateAuthenticatedSerializer(data=request.data,
                                                                         context={'request': request})
             user_addresses = user.addresses.all()
             user_cards = user.cards.all()
@@ -108,13 +102,14 @@ class OrderCreateView(APIView):
             serializer = serializers.OrderCreateSerializer(data=request.data)
             cart = Cart(request)
             session_cart_items = cart.get_cart_items()
-            
+
         if serializer.is_valid():
             if user_is_authenticated:
                 user_data = {
                     'name': user.first_name if user.first_name else serializer.validated_data.get('name'),
                     'email': user.email,
-                    'phone_number': user.phone_number if user.phone_number else serializer.validated_data.get('phone_number'),
+                    'phone_number': user.phone_number if user.phone_number else serializer.validated_data.get(
+                        'phone_number'),
                     'address': serializer.validated_data.get('address'),
                     'card': serializer.validated_data.get('card'),
                 }
@@ -126,7 +121,7 @@ class OrderCreateView(APIView):
                     'address': serializer.validated_data.get('address'),
                     'card': serializer.validated_data.get('card'),
                 }
-            
+
                 anonymous_card = Card.objects.create(user=None, card_number=user_data['card'])
                 anonymous_address = Address.objects.create(user=None, address=user_data['address'])
 
@@ -153,23 +148,24 @@ class OrderCreateView(APIView):
 
                 if not db_cart_items:
                     return Response({'error': 'Your cart is empty.'}, status=status.HTTP_400_BAD_REQUEST)
-                
+
                 total_order_price = sum(db_cart_item.get_total_price() for db_cart_item in db_cart_items)
-                
+
                 # Создание заказа
-                order = serializer.save(customer=user, 
+                order = serializer.save(customer=user,
                                         name=user_data['name'],
                                         phone_number=user_data['phone_number'],
                                         email=user_data['email'],
                                         card=authenticated_card if authenticated_card else user_data['card'],
-                                        address=authenticated_address if authenticated_address else user_data['address'],
-                                        total_order_price=total_order_price, 
+                                        address=authenticated_address if authenticated_address else user_data[
+                                            'address'],
+                                        total_order_price=total_order_price,
                                         status=1)
-                
+
                 for db_cart_item in db_cart_items:
-                    OrderItem.objects.create(order=order, 
-                                             product=db_cart_item.product, 
-                                             price=db_cart_item.product.get_real_price(), 
+                    OrderItem.objects.create(order=order,
+                                             product=db_cart_item.product,
+                                             price=db_cart_item.product.get_real_price(),
                                              quantity=db_cart_item.quantity,
                                              status=1)
                 # Очистка корзины авторизованного пользователя
@@ -178,14 +174,14 @@ class OrderCreateView(APIView):
             else:
                 if not session_cart_items:
                     return Response({'error': 'Your cart is empty.'}, status=status.HTTP_400_BAD_REQUEST)
-                
+
                 # Создание заказа
-                order = serializer.save(customer=None, 
+                order = serializer.save(customer=None,
                                         card=anonymous_card,
                                         address=anonymous_address,
-                                        total_order_price=cart.get_total_cart_price(), 
+                                        total_order_price=cart.get_total_cart_price(),
                                         status=1)
-                
+
                 for item in session_cart_items:
                     product_id = item['product'].id
                     product = get_object_or_404(
@@ -194,8 +190,8 @@ class OrderCreateView(APIView):
                             average_score=Avg('reviews__score'),
                             total_ordered_quantity=Sum('ordered_products__quantity')
                         ).prefetch_related('reviews', 'product_images'
-                        ).select_related('seller', 'cosplay_character__fandom'
-                        ), pk=product_id, is_active=True)
+                                           ).select_related('seller', 'cosplay_character__fandom'
+                                                            ), pk=product_id, is_active=True)
                     quantity = item['quantity']
                     price = item['price']
 
@@ -203,8 +199,8 @@ class OrderCreateView(APIView):
                                              product=product,
                                              quantity=quantity,
                                              price=price,
-                                             status=1)    
-                # Очистка сессионной корзины
+                                             status=1)
+                    # Очистка сессионной корзины
                 cart.clear()
 
             # Отправка SMS и Email об успешном оформлении заказа через Celery
@@ -229,10 +225,10 @@ class OrderListView(generics.ListAPIView):
                 reviews_count=Count('reviews', distinct=True),
                 average_score=Avg('reviews__score'),
                 total_ordered_quantity=Sum('ordered_products__quantity')
-                ).prefetch_related('reviews', 'product_images'
-                ).select_related('seller', 'cosplay_character__fandom'))
-            ).filter(customer=user)
-    
+            ).prefetch_related('reviews', 'product_images'
+                               ).select_related('seller', 'cosplay_character__fandom'))
+        ).filter(customer=user)
+
 
 class OrderDetailView(generics.RetrieveAPIView):
     serializer_class = serializers.OrderDetailSerializer
@@ -242,13 +238,13 @@ class OrderDetailView(generics.RetrieveAPIView):
             reviews_count=Count('reviews', distinct=True),
             average_score=Avg('reviews__score'),
             total_ordered_quantity=Sum('ordered_products__quantity')
-            ).prefetch_related('reviews', 'product_images'
-            ).select_related('seller', 'cosplay_character__fandom'))
-        ).select_related('card', 'address', 'customer').annotate(
-            ordered_products_amount=Count('order_items'),
-            total_order_items_quantity=Sum('order_items__quantity')).all()
+        ).prefetch_related('reviews', 'product_images'
+                           ).select_related('seller', 'cosplay_character__fandom'))
+    ).select_related('card', 'address', 'customer').annotate(
+        ordered_products_amount=Count('order_items'),
+        total_order_items_quantity=Sum('order_items__quantity')).all()
     lookup_field = 'slug'
-    
+
 
 class OrderItemView(generics.RetrieveAPIView):
     serializer_class = serializers.OrderItemSerializer
@@ -256,14 +252,15 @@ class OrderItemView(generics.RetrieveAPIView):
     queryset = OrderItem.objects.select_related('order__customer',
                                                 'order__address',
                                                 'order__card'
-        ).prefetch_related(Prefetch('product', queryset=Product.objects.annotate(
+                                                ).prefetch_related(
+        Prefetch('product', queryset=Product.objects.annotate(
             reviews_count=Count('reviews', distinct=True),
             average_score=Avg('reviews__score'),
             total_ordered_quantity=Sum('ordered_products__quantity')
-            ).prefetch_related('reviews', 'product_images',
-            ).select_related('seller', 'cosplay_character__fandom'))).all()
+        ).prefetch_related('reviews', 'product_images',
+                           ).select_related('seller', 'cosplay_character__fandom'))).all()
     lookup_field = 'slug'
-    
+
 
 @api_view(['POST'])
 @transaction.atomic
@@ -273,18 +270,19 @@ def create_order_payment(request, order_id):
     main_store = Store.objects.get(id=1)
 
     order_queryset = Order.objects.prefetch_related(Prefetch(
-        'order_items', 
+        'order_items',
         queryset=OrderItem.objects.select_related('product__seller'))
-        ).select_related('card', 'customer')
+    ).select_related('card', 'customer')
     order = get_object_or_404(order_queryset, pk=order_id)
 
-    if (order.customer and user_is_authenticated and user == order.customer) or not (order.customer and user_is_authenticated):
+    if (order.customer and user_is_authenticated and user == order.customer) or not (
+            order.customer and user_is_authenticated):
         card = order.card
         payment_amount = order.total_order_price
 
         if card.balance < payment_amount:
             return Response({'error': 'Insufficient funds on the card.'}, status=status.HTTP_400_BAD_REQUEST)
-        
+
         Transaction.objects.create(card=card, transaction_type='Purchase', amount=payment_amount, related_order=order)
         card.balance -= payment_amount
         card.save()
@@ -300,20 +298,20 @@ def create_order_payment(request, order_id):
             if seller == main_store:
                 main_store_proceeds += item.get_total_price()
             else:
-                other_stores_proceeds[seller] += sale_proceeds 
+                other_stores_proceeds[seller] += sale_proceeds
                 main_store_proceeds += comission
 
             Transaction.objects.create(transaction_type='Sale',
                                        related_order_item=item,
                                        related_seller=seller,
                                        amount=item.get_total_price())
-            
+
             if seller != main_store:
                 Transaction.objects.create(transaction_type='Comission',
                                            related_order_item=item,
                                            related_seller=seller,
                                            amount=comission)
-            
+
             item_product = item.product
 
             if item_product.in_stock is not None:
@@ -321,7 +319,8 @@ def create_order_payment(request, order_id):
                     item_product.in_stock -= item.quantity
                     item_product.save()
                 else:
-                    return Response({'error': 'Product is not available to purchase.'}, status=status.HTTP_400_BAD_REQUEST)
+                    return Response({'error': 'Product is not available to purchase.'},
+                                    status=status.HTTP_400_BAD_REQUEST)
 
             item.status = 2
             item.save()
@@ -340,5 +339,5 @@ def create_order_payment(request, order_id):
         send_order_paid_notifications.delay(user_is_authenticated, order.id)
     else:
         return Response({'error': 'You cannot pay for this order.'}, status=status.HTTP_405_METHOD_NOT_ALLOWED)
-    
+
     return Response({'message': 'Order was paid successfully.'}, status=status.HTTP_200_OK)

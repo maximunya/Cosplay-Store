@@ -17,7 +17,6 @@ from .models import Product, Review, Answer
 from .serializers import ReviewCreateSerializer
 from . import permissions
 
-
 User = get_user_model()
 
 
@@ -39,7 +38,7 @@ class ProductListView(generics.ListAPIView):
     ]
     search_fields = [
         'title', 'description', 'size', 'shoes_size',
-        'cosplay_character.name', 'cosplay_character.fandom.name', 
+        'cosplay_character.name', 'cosplay_character.fandom.name',
         'cosplay_character.fandom.fandom_type', 'product_type',
         'seller.name', 'seller.organization_name'
     ]
@@ -68,39 +67,39 @@ class ProductListView(generics.ListAPIView):
                                   query=search_query,
                                   fields=self.search_fields,
                                   fuzziness="auto")
-        
+
         results = search.execute()
         product_ids = [hit.id for hit in results]
 
         return Product.objects.select_related(
             'seller', 'cosplay_character__fandom').annotate(
-                reviews_count=Count('reviews', distinct=True),
-                average_score=Coalesce(Avg('reviews__score'), 0, output_field=FloatField()),
-                total_ordered_quantity=Coalesce(Sum('ordered_products__quantity'), 0),
-                actual_price=Case( 
-                    When(discount__gt=0, then=F('price') - (F('price') * F('discount') / 100)),
-                    default=F('price'),
-                    output_field=FloatField()
-                )
-            ).prefetch_related('reviews', 'product_images'
-            ).filter(is_active=True, pk__in=product_ids).order_by(ordering, '-timestamp')
-    
+            reviews_count=Count('reviews', distinct=True),
+            average_score=Coalesce(Avg('reviews__score'), 0, output_field=FloatField()),
+            total_ordered_quantity=Coalesce(Sum('ordered_products__quantity'), 0),
+            actual_price=Case(
+                When(discount__gt=0, then=F('price') - (F('price') * F('discount') / 100)),
+                default=F('price'),
+                output_field=FloatField()
+            )
+        ).prefetch_related('reviews', 'product_images'
+                           ).filter(is_active=True, pk__in=product_ids).order_by(ordering, '-timestamp')
+
 
 class ProductDetailView(generics.RetrieveAPIView):
     serializer_class = ProductDetailSerializer
     queryset = Product.objects.select_related(
-            'seller', 'cosplay_character__fandom',
-        ).prefetch_related(
-            'reviews__customer', 'reviews__answers__seller',
-            'product_images', 'seller__employees') \
+        'seller', 'cosplay_character__fandom',
+    ).prefetch_related(
+        'reviews__customer', 'reviews__answers__seller',
+        'product_images', 'seller__employees') \
         .annotate(
-            reviews_count=Count('reviews', distinct=True),
-            average_score=Coalesce(Avg('reviews__score'), 0, output_field=FloatField()),
-            total_ordered_quantity=Coalesce(Sum('ordered_products__quantity'), 0)
-        ).filter(is_active=True)
+        reviews_count=Count('reviews', distinct=True),
+        average_score=Coalesce(Avg('reviews__score'), 0, output_field=FloatField()),
+        total_ordered_quantity=Coalesce(Sum('ordered_products__quantity'), 0)
+    ).filter(is_active=True)
     lookup_field = 'slug'
-    
-    
+
+
 class ReviewCreateView(generics.CreateAPIView):
     serializer_class = ReviewCreateSerializer
     permission_classes = (permissions.IsCustomerOrAdminUser,)
@@ -114,14 +113,14 @@ class ReviewCreateView(generics.CreateAPIView):
 class ReviewDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = ReviewSerializer
     permission_classes = (permissions.IsAuthorOrAdminOrReadOnly,)
-   
+
     def get_queryset(self):
         product = get_object_or_404(Product, pk=self.kwargs['product_id'])
 
         return Review.objects.select_related('product', 'customer'
-            ).prefetch_related('answers__seller'
-            ).filter(product=product)
-    
+                                             ).prefetch_related('answers__seller'
+                                                                ).filter(product=product)
+
 
 class AnswerDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = AnswerSerializer
@@ -131,8 +130,5 @@ class AnswerDetailView(generics.RetrieveUpdateDestroyAPIView):
         product = get_object_or_404(Product, pk=self.kwargs['product_id'])
 
         return Answer.objects.select_related('seller', 'review__product'
-            ).prefetch_related('seller__employees'
-            ).filter(review__product=product)
-
-
-
+                                             ).prefetch_related('seller__employees'
+                                                                ).filter(review__product=product)

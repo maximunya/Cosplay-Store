@@ -68,4 +68,3 @@ class CardDetailSerializer(serializers.ModelSerializer):
 		model = Card
 		fields = ('id', 'uuid', 'name', 'card_number', 'balance', 'created_at', 'card_transactions')
 		read_only_fields = ('id', 'uuid', 'card_number', 'balance', 'created_at', 'card_transactions')
-
