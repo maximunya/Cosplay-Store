@@ -16,4 +16,4 @@ CMD python manage.py migrate \
     && python manage.py collectstatic --no-input \
     && python manage.py initialize_db \
     && echo y | python manage.py search_index --rebuild \
-    && gunicorn backend.wsgi:application --bind 0.0.0.0:8000
+    && gunicorn backend.wsgi:application --bind 0.0.0.0:8000 --workers 3 --timeout 30

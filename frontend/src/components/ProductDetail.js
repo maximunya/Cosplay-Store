@@ -11,7 +11,7 @@ function ProductDetail({ access }) {
     const [isLoaded, setIsLoaded] = useState(false);
 
     useEffect(() => {
-        axios.get(`http://127.0.0.1:8000/api/products/${params.id}/`, {
+        axios.get(`http://localhost:8000/api/products/${params.id}/`, {
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json'
